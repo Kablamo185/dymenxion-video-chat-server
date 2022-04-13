@@ -3,6 +3,7 @@ const server = require("http").createServer(app);
 const { match } = require("assert");
 const cors = require("cors");
 const { Namespace } = require("socket.io");
+const Mutex = require('async-mutex').Mutex;
 
 const io = require("socket.io")(server, {
   cors: {
@@ -21,6 +22,8 @@ let clientNo = 0;
 
 //Queue(s)
 const queue = [];
+const queueMutex = new Mutex(); // this gates access to queue
+
 const blitzQueue = []
 //const upfQueue = []
 
@@ -64,40 +67,42 @@ io.on("connection", (socket) => {
   //Queue Functionalitys
 
   //Add users to queue + Check to see if Queue has enough users to start a match.
-  socket.on("queuecc", ({ id, signalData, user, myRoomToQueue, rating }) => {
+  socket.on("queuecc", async ({ id, signalData, user, myRoomToQueue, rating }) => {
     let userToQueue = {
       id: id,
       name: user,
       room: myRoomToQueue,
       rating: rating,
     };
-    console.log(userToQueue);
-    queue.push(userToQueue);
-    console.log(user);
-    //emit back a function to disable UI behind a "queue pop-up"
-    //io.to(id).emit("disableui");
-    console.log(`Adding ${user} ${id} to queue`);
-    console.log(queue);
-    if (queue.length >= 2) {
-      console.log(queue);
-      let user1 = queue.shift();
-      let user2 = queue.shift();
+    console.log(JSON.stringify(userToQueue));
+	// block the thread if someone is already executing in this part
+	await queueMutex.runExclusive(async () => {
+		queue.push(userToQueue);
+		//emit back a function to disable UI behind a "queue pop-up"
+		//io.to(id).emit("disableui");
+		console.log(`Adding ${user} ${id} to queue`);
+		console.log(queue);
+		if (queue.length >= 2) {
+		  console.log(queue);
+		  let user1 = queue.shift();
+		  let user2 = queue.shift();
 
-      console.log(user1);
-      //console.log(user1.roomNo)
-      console.log(user2);
-      //console.log(user2.roomNo)
+		  console.log(user1);
+		  //console.log(user1.roomNo)
+		  console.log(user2);
+		  //console.log(user2.roomNo)
 
-      io.to(user1.id).emit("setoppdetails", user2);
-      io.to(user2.id).emit("setoppdetails", user1);
+		  io.to(user1.id).emit("setoppdetails", user2);
+		  io.to(user2.id).emit("setoppdetails", user1);
 
-      io.to(user1.id).emit("calluser", {
-        signal: signalData,
-        from: user2.id,
-        name: user2.name,
-      });
+		  io.to(user1.id).emit("calluser", {
+			signal: signalData,
+			from: user2.id,
+			name: user2.name,
+		  });
 
-      console.log(`starting match between ${user1} and ${user2}`);
+		console.log(`starting match between ${user1} and ${user2}`);
+		});
     }
   });
 
