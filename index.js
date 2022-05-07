@@ -3,10 +3,6 @@ const server = require("http").createServer(app);
 const { match } = require("assert");
 const cors = require("cors");
 const { Namespace } = require("socket.io");
-<<<<<<< Updated upstream
-=======
-const Mutex = require("async-mutex").Mutex;
->>>>>>> Stashed changes
 
 const io = require("socket.io")(server, {
   cors: {
@@ -25,13 +21,7 @@ let clientNo = 0;
 
 //Queue(s)
 const queue = [];
-<<<<<<< Updated upstream
 const blitzQueue = []
-=======
-const queueMutex = new Mutex(); // this gates access to queue
-
-const blitzQueue = [];
->>>>>>> Stashed changes
 //const upfQueue = []
 
 app.get("/", (req, res) => {
