@@ -3,6 +3,10 @@ const server = require("http").createServer(app);
 const { match } = require("assert");
 const cors = require("cors");
 const { Namespace } = require("socket.io");
+<<<<<<< Updated upstream
+=======
+const Mutex = require("async-mutex").Mutex;
+>>>>>>> Stashed changes
 
 const io = require("socket.io")(server, {
   cors: {
@@ -13,7 +17,7 @@ const io = require("socket.io")(server, {
 
 app.use(cors());
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // to detect how many users are connected
 let clientNo = 0;
@@ -21,7 +25,13 @@ let clientNo = 0;
 
 //Queue(s)
 const queue = [];
+<<<<<<< Updated upstream
 const blitzQueue = []
+=======
+const queueMutex = new Mutex(); // this gates access to queue
+
+const blitzQueue = [];
+>>>>>>> Stashed changes
 //const upfQueue = []
 
 app.get("/", (req, res) => {
@@ -64,6 +74,7 @@ io.on("connection", (socket) => {
   //Queue Functionalitys
 
   //Add users to queue + Check to see if Queue has enough users to start a match.
+<<<<<<< Updated upstream
   socket.on("queuecc", ({ id, signalData, user, myRoomToQueue, rating }) => {
     let userToQueue = {
       id: id,
@@ -100,44 +111,115 @@ io.on("connection", (socket) => {
       console.log(`starting match between ${user1} and ${user2}`);
     }
   });
+=======
+  socket.on(
+    "queuecc",
+    ({ id, signalData, user, myRoomToQueue, rating }, callback) => {
+      let userToQueue = {
+        id: id,
+        name: user,
+        room: myRoomToQueue,
+        rating: rating,
+      };
 
-//Add users to Blitz Queue
-  socket.on("queueblitz", ({ id, signalData, user, myRoomToQueue, rating }) => {
-    let userToQueue = {
-      id: id,
-      name: user,
-      room: myRoomToQueue,
-      rating: rating,
-    };
-    console.log(userToQueue);
-    blitzQueue.push(userToQueue);
-    console.log(user);
-    //emit back a function to disable UI behind a "queue pop-up"
-    //io.to(id).emit("disableui");
-    console.log(`Adding ${user} ${id} to queue`);
-    console.log(blitzQueue);
-    if (blitzQueue.length >= 2) {
-      console.log(blitzQueue);
-      let user1 = blitzQueue.shift();
-      let user2 = blitzQueue.shift();
+      const isFound = queue.some((element) => {
+        if (element.id === userToQueue.id) {
+          return true;
+        }
 
-      console.log(user1);
-      //console.log(user1.roomNo)
-      console.log(user2);
-      //console.log(user2.roomNo)
+        return false;
+      });
+>>>>>>> Stashed changes
 
-      io.to(user1.id).emit("setoppdetails", user2);
-      io.to(user2.id).emit("setoppdetails", user1);
+      if (!isFound) {
+        callback("Adding you to queue");
+        queue.push(userToQueue);
+        console.log(`Adding ${user} ${id} to queue`);
+        console.log(queue);
+      } else {
+        callback("You're already in the queue");
+        console.log(`${userToQueue.id} is already in the queue.`);
+      }
+      console.log(userToQueue);
 
-      io.to(user1.id).emit("calluser", {
-        signal: signalData,
-        from: user2.id,
-        name: user2.name,
+      //Split queue check off into new function:
+      if (queue.length >= 2) {
+        console.log(queue);
+        let user1 = queue.shift();
+        let user2 = queue.shift();
+
+        console.log(user1);
+        console.log(user2);
+
+        io.to(user1.id).emit("calluser", {
+          signal: signalData,
+          from: user2.id,
+          name: user2.name,
+        });
+
+        io.to(user1.id).emit("setoppdetails", user2);
+        io.to(user2.id).emit("setoppdetails", user1);
+
+        console.log(`starting match between ${user1} and ${user2}`);
+      }
+      //})
+      console.log(`This is the que: ${JSON.stringify(queue)}`);
+    }
+  );
+
+  //Add users to Blitz Queue
+  socket.on(
+    "queueblitz",
+    ({ id, signalData, user, myRoomToQueue, rating }, callback) => {
+      let userToQueue = {
+        id: id,
+        name: user,
+        room: myRoomToQueue,
+        rating: rating,
+      };
+
+      const isFound = queue.some((element) => {
+        if (element.id === userToQueue.id) {
+          return true;
+        }
+
+        return false;
       });
 
-      console.log(`starting match between ${user1} and ${user2}`);
+      if (!isFound) {
+        callback("Adding you to queue");
+        blitzQueue.push(userToQueue);
+        console.log(`Adding ${user} ${id} to queue`);
+        console.log(blitzQueue);
+      } else {
+        callback("You're already in the queue");
+        console.log(`${userToQueue.id} is already in the queue.`);
+      }
+      console.log(userToQueue);
+
+      if (blitzQueue.length >= 2) {
+        console.log(blitzQueue);
+        let user1 = blitzQueue.shift();
+        let user2 = blitzQueue.shift();
+
+        console.log(user1);
+        //console.log(user1.roomNo)
+        console.log(user2);
+        //console.log(user2.roomNo)
+
+        io.to(user1.id).emit("setoppdetails", user2);
+        io.to(user2.id).emit("setoppdetails", user1);
+
+        io.to(user1.id).emit("calluser", {
+          signal: signalData,
+          from: user2.id,
+          name: user2.name,
+        });
+
+        console.log(`starting match between ${user1} and ${user2}`);
+      }
     }
-  });
+  );
 
   // leave call functionality
   socket.on("leavecall", ({ me, oppID }) => {
@@ -154,12 +236,11 @@ io.on("connection", (socket) => {
     if (foundUser > -1) {
       queue.splice(foundUser, 1);
     } else {
-        foundUser = blitzQueue.findIndex((element) => element.id === socket.id)
-        if (foundUser > -1) {
-            blitzQueue.splice(foundUser, 1);
-          }
+      foundUser = blitzQueue.findIndex((element) => element.id === socket.id);
+      if (foundUser > -1) {
+        blitzQueue.splice(foundUser, 1);
+      }
     }
-
   });
 
   socket.on("checkthequeue", () => {
@@ -168,7 +249,6 @@ io.on("connection", (socket) => {
     console.log(`the amount of clients connected is ${clientNo}`);
     // console.log(connectedClients)
   });
-
 
   //functionality to pass life totals between users.
   socket.on("mylifetotal", ({ newValue, oppID }) => {
