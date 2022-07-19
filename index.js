@@ -3,6 +3,7 @@ const server = require("http").createServer(app);
 const { match } = require("assert");
 const cors = require("cors");
 const { Namespace } = require("socket.io");
+require('dotenv').config();
 
 const io = require("socket.io")(server, {
   cors: {
@@ -12,6 +13,11 @@ const io = require("socket.io")(server, {
 });
 
 app.use(cors());
+
+let twilio = require('twilio')(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
 
 const PORT = process.env.PORT || 5001;
 
@@ -32,6 +38,19 @@ io.on("connection", (socket) => {
   clientNo++;
   socket.emit("updateusers", clientNo);
   socket.broadcast.emit("updateusers", clientNo);
+  //Generate Twilio Token
+  socket.on('token', function(){
+    twilio.tokens.create(function(err, response){
+      if(err){
+        console.log(err);
+      }else{
+        socket.emit('token', response);
+        console.log("we got here:")
+        console.log(response)
+      }
+    });
+  });
+
   //functionality to create and join a room specific to the connecting user.
   console.log(`${socket.id} has joined the server.`);
   let roomNo = Math.round(clientNo);

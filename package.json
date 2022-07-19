@@ -14,9 +14,11 @@
   "dependencies": {
     "async-mutex": "^0.3.2",
     "cors": "^2.8.5",
+    "dotenv": "^16.0.1",
     "express": "^4.17.3",
     "nodemon": "^2.0.15",
     "socket.io": "^4.4.1",
-    "socket.io-client": "^4.4.1"
+    "socket.io-client": "^4.4.1",
+    "twilio": "^3.79.0"
   }
 }
